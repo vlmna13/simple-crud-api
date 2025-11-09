@@ -1,7 +1,9 @@
 import { randomUUID } from "crypto";
 import { User } from "../types/user";
 
-export class UserService {
+import { EventEmitter } from "events";
+
+export class UserService extends EventEmitter {
   private users: User[] = [];
 
   getAll(): User[] {
@@ -13,28 +15,37 @@ export class UserService {
   }
 
   create(data: Omit<User, "id">): User {
-    const newUser: User = {
-      id: randomUUID(),
-      ...data,
-    };
+    const newUser: User = { id: randomUUID(), ...data };
     this.users.push(newUser);
+    this.emit("change");
     return newUser;
   }
 
   update(id: string, data: Partial<Omit<User, "id">>): User | undefined {
-    const userIndex = this.users.findIndex((u) => u.id === id);
-    if (userIndex === -1) return undefined;
+    const index = this.users.findIndex((u) => u.id === id);
+    if (index === -1) return undefined;
 
-    const updated = { ...this.users[userIndex], ...data };
-    this.users[userIndex] = updated;
-    return updated;
+    this.users[index] = { ...this.users[index], ...data };
+    this.emit("change");
+    return this.users[index];
   }
 
   delete(id: string): boolean {
-    const userIndex = this.users.findIndex((u) => u.id === id);
-    if (userIndex === -1) return false;
+    const index = this.users.findIndex((u) => u.id === id);
+    if (index === -1) return false;
 
-    this.users.splice(userIndex, 1);
+    this.users.splice(index, 1);
+    this.emit("change");
     return true;
   }
+
+  setUsers(newUsers: User[]): void {
+    this.users = newUsers;
+  }
+
+  onChange(callback: (users: User[]) => void): void {
+    this.on("change", () => callback(this.users));
+  }
 }
+
+export const userServiceInstance = new UserService();

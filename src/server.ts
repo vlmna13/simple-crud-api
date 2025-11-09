@@ -3,8 +3,7 @@ import { UserService } from "./services/userService";
 import { User } from "./types/user.js";
 import { v4 as randomUUID, validate as validateUUID } from "uuid";
 import { parseBody } from "./parseBody";
-
-const userService = new UserService();
+import { userServiceInstance as userService } from "./services/userService";
 
 function sendJSON(res: ServerResponse, status: number, data: unknown): void {
   res.writeHead(status, { "Content-Type": "application/json" });
