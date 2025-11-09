@@ -6,110 +6,83 @@ import { parseBody } from "./parseBody";
 
 const userService = new UserService();
 
+function sendJSON(res: ServerResponse, status: number, data: unknown): void {
+  res.writeHead(status, { "Content-Type": "application/json" });
+  res.end(JSON.stringify(data));
+}
+
 export const createServer = () => {
-  const server = http.createServer(
+  return http.createServer(
     async (req: IncomingMessage, res: ServerResponse) => {
-      const { method, url } = req;
-      if (!url) return;
-      if (!url.startsWith("/api/users")) {
-        res.writeHead(404, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ message: "Route not found" }));
-        return;
-      }
-
-      const parts = url.split("/").filter(Boolean);
-      const userId = parts[2];
-
       try {
-        if (method === "GET" && parts.length === 2) {
-          const users = userService.getAll();
-          res.writeHead(200, { "Content-Type": "application/json" });
-          res.end(JSON.stringify(users));
-          return;
+        const { method, url } = req;
+        if (!url) return sendJSON(res, 404, { message: "Route not found" });
+
+        const parts = url.split("/").filter(Boolean);
+        if (parts[0] !== "api" || parts[1] !== "users") {
+          return sendJSON(res, 404, { message: "Route not found" });
         }
-        if (method === "GET" && parts.length === 3) {
+
+        const userId = parts[2];
+
+        if (method === "GET" && parts.length === 2) {
+          return sendJSON(res, 200, userService.getAll());
+        }
+
+        if (method === "GET" && userId) {
           if (!validateUUID(userId)) {
-            res.writeHead(400, { "Content-Type": "application/json" });
-            res.end(JSON.stringify({ message: "Invalid user ID" }));
-            return;
-          }
-          const user = userService.getById(userId);
-          if (!user) {
-            res.writeHead(404, { "Content-Type": "application/json" });
-            res.end(JSON.stringify({ message: "User not found" }));
-            return;
+            return sendJSON(res, 400, { message: "Invalid user ID" });
           }
 
-          res.writeHead(200, { "Content-Type": "application/json" });
-          res.end(JSON.stringify(user));
-          return;
+          const user = userService.getById(userId);
+          return user
+            ? sendJSON(res, 200, user)
+            : sendJSON(res, 404, { message: "User not found" });
         }
+
         if (method === "POST" && parts.length === 2) {
           const body = await parseBody(req);
           const { username, age, hobbies } = body;
 
           if (!username || typeof age !== "number" || !Array.isArray(hobbies)) {
-            res.writeHead(400, { "Content-Type": "application/json" });
-            res.end(JSON.stringify({ message: "Missing or invalid fields" }));
-            return;
+            return sendJSON(res, 400, { message: "Missing or invalid fields" });
           }
 
           const newUser = userService.create({ username, age, hobbies });
-          res.writeHead(201, { "Content-Type": "application/json" });
-          res.end(JSON.stringify(newUser));
-          return;
+          return sendJSON(res, 201, newUser);
         }
 
-        if (method === "PUT" && parts.length === 3) {
+        if (method === "PUT" && userId) {
           if (!validateUUID(userId)) {
-            res.writeHead(400, { "Content-Type": "application/json" });
-            res.end(JSON.stringify({ message: "Invalid user ID" }));
-            return;
+            return sendJSON(res, 400, { message: "Invalid user ID" });
           }
 
-          const user = userService.getById(userId);
-          if (!user) {
-            res.writeHead(404, { "Content-Type": "application/json" });
-            res.end(JSON.stringify({ message: "User not found" }));
-            return;
+          const existingUser = userService.getById(userId);
+          if (!existingUser) {
+            return sendJSON(res, 404, { message: "User not found" });
           }
 
           const body = await parseBody(req);
           const updated = userService.update(userId, body);
-
-          res.writeHead(200, { "Content-Type": "application/json" });
-          res.end(JSON.stringify(updated));
-          return;
+          return sendJSON(res, 200, updated);
         }
 
-        if (method === "DELETE" && parts.length === 3) {
+        if (method === "DELETE" && userId) {
           if (!validateUUID(userId)) {
-            res.writeHead(400, { "Content-Type": "application/json" });
-            res.end(JSON.stringify({ message: "Invalid user ID" }));
-            return;
+            return sendJSON(res, 400, { message: "Invalid user ID" });
           }
 
           const deleted = userService.delete(userId);
-          if (!deleted) {
-            res.writeHead(404, { "Content-Type": "application/json" });
-            res.end(JSON.stringify({ message: "User not found" }));
-            return;
-          }
-
-          res.writeHead(204);
-          res.end();
-          return;
+          return deleted
+            ? sendJSON(res, 204, {})
+            : sendJSON(res, 404, { message: "User not found" });
         }
 
-        res.writeHead(404, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ message: "Route not found" }));
+        sendJSON(res, 404, { message: "Route not found" });
       } catch (err) {
         console.error("Server error:", err);
-        res.writeHead(500, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ message: "Internal server error" }));
+        sendJSON(res, 500, { message: "Internal server error" });
       }
     }
   );
-
-  return server;
 };
