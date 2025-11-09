@@ -7,16 +7,22 @@
     "start:dev": "nodemon --watch src --ext ts --exec ts-node src/index.ts",
     "build": "tsc",
     "start:prod": "npm run build && node dist/index.js",
-    "start:multi": "nodemon --watch src --ext ts --exec ts-node src/cluster.ts"
+    "start:multi": "nodemon --watch src --ext ts --exec ts-node src/cluster.ts",
+    "test": "jest --detectOpenHandles --runInBand --config=jest.config.cjs"
   },
   "dependencies": {
     "dotenv": "^17.2.3",
-    "uuid": "^13.0.0"
+    "uuid": "^9.0.1"
   },
   "devDependencies": {
+    "@types/jest": "^30.0.0",
     "@types/node": "^24.10.0",
+    "@types/supertest": "^6.0.3",
     "@types/uuid": "^10.0.0",
+    "jest": "^30.2.0",
     "nodemon": "^3.1.10",
+    "supertest": "^7.1.4",
+    "ts-jest": "^29.4.5",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
   }
